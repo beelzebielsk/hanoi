@@ -3,10 +3,18 @@
 (require 2htdp/image)
 (require 2htdp/universe)
 
+; TODO
+; - Organize the tower drawing stuff. Perhaps make them an object?
+; - There's trouble with drawing all of the towers. The images change
+;   if I remove the largest disk from all of the towers. Though, to be
+;   fair, this means that sizes changes just once per game.
+; - Hande trying to remove from an empty tower, or trying to put a
+;   disk on a tower that's too large. 
+
 (define disk-height 20)
 ; A disk is a positive number.
 (define (draw-disk disk)
-  (rectangle (+ 40 (* disk 20)) disk-height 'solid 'black))
+  (rectangle (+ 30 (* disk 60)) disk-height 'solid 'black))
 
 ; A tower is a list of numbers of strictly decreasing size.
 ; The first element (car tower) is the largest number, and (cdr tower)
