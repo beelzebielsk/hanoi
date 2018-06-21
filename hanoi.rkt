@@ -14,7 +14,7 @@
 (define disk-height 20)
 ; A disk is a positive number.
 (define (draw-disk disk)
-  (rectangle (+ 30 (* disk 60)) disk-height 'solid 'black))
+  (rectangle (+ 10 (* disk 60)) disk-height 'solid 'black))
 
 ; A tower is a list of numbers of strictly decreasing size.
 ; The first element (car tower) is the largest number, and (cdr tower)
@@ -28,7 +28,7 @@
 (define tower-empty? null?)
 (define tower-non-empty? pair?)
 (define (tower-can-add? tower disk)
-  (< disk (tower-top tower)))
+  (or (tower-empty? tower) (< disk (tower-top tower))))
 
 ; image? positive? -> positive?
 ; Takes an image, and the width of a larger image.
@@ -142,45 +142,44 @@
   [to-draw 
     (lambda (state)
       (let* [(towers (draw-towers (state-towers state)))
-             (tower-area (overlay
-                           towers
-                           (empty-scene (image-width towers)
-                                        (image-height towers))))
             (limbo-area (empty-scene (image-width towers)
                                      (* disk-height 3)))
             (limbo (if (state-limbo state)
                      (overlay (draw-disk (state-limbo state))
                               limbo-area)
-                     limbo-area))]
-        (above limbo tower-area)))]
+                     limbo-area))
+            (game-image (above limbo towers))]
+        (overlay game-image (empty-scene (image-width game-image)
+                                         (image-height game-image)))))]
   [on-key
     (lambda (state key)
-      (if (eq? (state-limbo state) #f)
-        ; No limbo disk.
-        (cond [(string=? key "1") 
-               (make-state (get-from-towers (state-towers state) 0)
-                           (remove-from-towers (state-towers state) 0))]
-              [(string=? key "2") 
-               (make-state (get-from-towers (state-towers state) 1)
-                           (remove-from-towers (state-towers state) 1))]
-              [(string=? key "3") 
-               (make-state (get-from-towers (state-towers state) 2)
-                           (remove-from-towers (state-towers state) 2))]
-              [(string=? key "s")
-               (begin (save-image (draw-towers (state-towers state))
-                                  "current-output.jpg")
-                      state)]
-              [(string=? key "q") #f ])
-        ; limbo disk.
-        (cond [(string=? key "1") 
-               (make-state #f
-                           (add-to-towers (state-towers state) 0 (state-limbo state)))]
-              [(string=? key "2") 
-               (make-state #f
-                           (add-to-towers (state-towers state) 1 (state-limbo state)))]
-              [(string=? key "3") 
-               (make-state #f
-                           (add-to-towers (state-towers state) 2 (state-limbo state)))])))]
+      (let* [(towers (state-towers state))
+             (limbo (state-limbo state))
+             (validate-index (lambda (index)
+                               (if (number? (string->number index))
+                                 (sub1 (string->number index))
+                                 #f)))
+             (index (validate-index key))]
+        (if (eq? limbo #f)
+          ; No limbo disk.
+          (cond [(and (number? index) (< index num-towers))
+                 (if (tower-non-empty? (list-ref towers index))
+                   (make-state (get-from-towers towers index)
+                               (remove-from-towers towers index))
+                   state)]
+                [(string=? key "s")
+                 (begin (save-image (draw-towers towers)
+                                    "current-output.jpg")
+                        state)]
+                [(string=? key "q") #f ]
+                [else state])
+          ; limbo disk.
+          (cond [(and (number? index) (< index num-towers))
+                 (if (tower-can-add? (list-ref towers index) limbo)
+                    (make-state #f
+                                (add-to-towers towers index limbo))
+                    state)]
+                [else state]))))]
   [stop-when boolean?])
 
 
