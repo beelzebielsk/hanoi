@@ -14,7 +14,8 @@
 (define disk-height 20)
 ; A disk is a positive number.
 (define (draw-disk disk)
-  (rectangle (+ 10 (* disk 60)) disk-height 'solid 'black))
+  (overlay (text (number->string disk) (sub1 disk-height) 'white)
+           (rectangle (+ 10 (* disk 30)) disk-height 'solid 'black)))
 
 ; A tower is a list of numbers of strictly decreasing size.
 ; The first element (car tower) is the largest number, and (cdr tower)
@@ -30,18 +31,6 @@
 (define (tower-can-add? tower disk)
   (or (tower-empty? tower) (< disk (tower-top tower))))
 
-; image? positive? -> positive?
-; Takes an image, and the width of a larger image.
-; Returns the x-offset that would center (horizontally) the smaller
-; image in the larger image.
-;
-; Assumption in the naming scheme is that the larger picture is an
-; underlay for the smaller picture.
-(define (bottom-center/x over under-width)
-  (let [(smaller-midpoint (/ (image-width over) 2))
-        (larger-midpoint (/ under-width 2))]
-    (- larger-midpoint smaller-midpoint)))
-
 ; tower? -> image?
 (define (draw-tower tower)
   (define (iter starting-point tower scene)
@@ -51,16 +40,15 @@
         (iter (+ starting-point disk-height)
               (cdr tower)
               (underlay/align/offset
-                'left 'bottom
+                'middle 'bottom
                 scene
-                (bottom-center/x disk (image-width scene))
+                0
                 (- starting-point)
                 disk)))))
   (iter 0
         tower
         empty-image))
 
-(define tower-separation 50)
 (define list-max (lambda (lst) (apply max lst)))
 
 ; list[images]  -> image
@@ -73,35 +61,27 @@
                   0
                   append-rest))))
 
-(define (draw-towers towers)
-  (define widest-disk 
-    (list-max (map list-max (filter tower-non-empty? towers))))
-  (define highest-tower (* disk-height 
-                           (list-max (map tower-height towers))))
-  (define blank-tower 
-    (rectangle (image-width (draw-disk widest-disk))
-               highest-tower
-               'solid 'white))
-  (define separator
-    (rectangle tower-separation
-               highest-tower
-               'solid 'white))
-  (define tower-pics 
-    (map (lambda (tower)
-           (if (tower-empty? tower)
-             blank-tower
-             (let [(tower-pic (draw-tower tower))]
-               (underlay/align/offset
-                 'left 'bottom
-                 blank-tower
-                 (bottom-center/x tower-pic
-                                  (image-width blank-tower))
-                 0
-                 tower-pic))))
-         towers))
-  (horizontal-image-append (add-between tower-pics separator)))
+(define (draw-towers towers blank-tower)
+  (let* [(width-between-towers 50)
+         (separator
+           (rectangle width-between-towers
+                      (image-height blank-tower)
+                      'solid 'white))
+         (tower-pics 
+           (map (lambda (tower)
+                  (if (tower-empty? tower)
+                    blank-tower
+                    (let [(tower-pic (draw-tower tower))]
+                      (underlay/align/offset
+                        'middle 'bottom
+                        blank-tower
+                        0
+                        0
+                        tower-pic))))
+                towers))]
+    (horizontal-image-append (add-between tower-pics separator))))
 
-(define initial-tower (list 5 4 3 2 1))
+(define initial-tower (list 7 6 5 4 3 2 1))
 (define (replace-ref lst index value)
   (cond [(null? lst) lst]
         [(zero? index) (cons value (cdr lst))]
@@ -139,18 +119,26 @@
 (big-bang
   (make-state #f (cons initial-tower 
                        (make-list (sub1 num-towers) null)))
+
   [to-draw 
-    (lambda (state)
-      (let* [(towers (draw-towers (state-towers state)))
-            (limbo-area (empty-scene (image-width towers)
-                                     (* disk-height 3)))
-            (limbo (if (state-limbo state)
-                     (overlay (draw-disk (state-limbo state))
-                              limbo-area)
-                     limbo-area))
-            (game-image (above limbo towers))]
-        (overlay game-image (empty-scene (image-width game-image)
-                                         (image-height game-image)))))]
+    (let* [(widest-disk (car initial-tower))
+           (widest-disk-width (image-width (draw-disk widest-disk)))
+           (height (* disk-height (tower-height initial-tower)))
+           (blank-tower (rectangle widest-disk-width 
+                                   height 
+                                   'solid 'white))]
+      (lambda (state)
+        (let* [(towers (draw-towers (state-towers state) blank-tower))
+               (limbo-area (empty-scene (image-width towers)
+                                        (* disk-height 3)))
+               (limbo (if (state-limbo state)
+                        (overlay (draw-disk (state-limbo state))
+                                 limbo-area)
+                        limbo-area))
+               (game-image (above limbo towers))]
+          (overlay game-image (empty-scene (image-width game-image)
+                                           (image-height game-image))))))]
+
   [on-key
     (lambda (state key)
       (let* [(towers (state-towers state))
@@ -162,11 +150,10 @@
              (index (validate-index key))]
         (if (eq? limbo #f)
           ; No limbo disk.
-          (cond [(and (number? index) (< index num-towers))
-                 (if (tower-non-empty? (list-ref towers index))
-                   (make-state (get-from-towers towers index)
-                               (remove-from-towers towers index))
-                   state)]
+          (cond [(and (number? index) (< index num-towers)
+                      (tower-non-empty? (list-ref towers index)))
+                 (make-state (get-from-towers towers index)
+                             (remove-from-towers towers index))]
                 [(string=? key "s")
                  (begin (save-image (draw-towers towers)
                                     "current-output.jpg")
