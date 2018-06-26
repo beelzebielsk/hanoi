@@ -203,11 +203,14 @@
                  state)]
               [else state]))))
   (define stop-when (compose1 (curry eq? #f) state-private))
+  ; This component is not intened to lead into anything else.
+  (define (final-state state) #f)
   (lambda (dispatch)
     (case dispatch
       [(to-draw) to-draw]
       [(on-key) on-key]
       [(stop-when) stop-when]
+      [(final-state) final-state]
       [(initial-state->state) initial-state->state])))
 (module+ test
   (define num-towers 3)

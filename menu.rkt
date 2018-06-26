@@ -60,7 +60,7 @@
 (define (menu-prev menu index)
   (modulo (sub1 index) (length (menu-items menu))))
 (define (menu-ref menu index)
-  (second (list-ref (menu-vals menu) index)))
+  (list-ref (menu-vals menu) index))
 
 (define (draw-menu menu selected-item)
   (draw-menu-items (menu-title menu) 
@@ -82,14 +82,19 @@
          (set-state-public state (menu-next game-menu menu-entry))]
         [("up" "k")
          (set-state-public state (menu-prev game-menu menu-entry))]
-        [("q" return) (set-state-private state #f)]
+        [("q" return "\n" "\r\n" "\n\r") 
+         (set-state-private state #f)]
         [else state])))
+  (define (final-state state)
+    (let [(index (state-public state))]
+      (menu-ref game-menu index)))
   (define stop-when (compose1 (curry eq? #f) state-private))
   (lambda (dispatch)
     (case dispatch
       [(to-draw) to-draw]
       [(on-key) on-key]
       [(stop-when) stop-when]
+      [(final-state) final-state]
       [(initial-state->state) initial-state->state])))
 (module+ test
   (define vals (build-list 5 identity))
