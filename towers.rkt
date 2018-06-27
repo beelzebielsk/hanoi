@@ -1,11 +1,8 @@
 #lang racket
 
-; TODO
-; - Organize the tower drawing stuff. Perhaps make them an object?
-
 (provide
   ;draw-disk
-  ;tower-height tower-top tower-rest
+  ;tower-height tower-top tower-remove-top
   ;tower-empty? tower-non-empty? tower-can-add?
   ;tower-add
   ;draw-tower draw-towers
@@ -15,12 +12,9 @@
 (require "component-state.rkt")
 
 ; TODO
-; - Organize the tower drawing stuff. Perhaps make them an object?
-; - There's trouble with drawing all of the towers. The images change
-;   if I remove the largest disk from all of the towers. Though, to be
-;   fair, this means that sizes changes just once per game.
-; - Hande trying to remove from an empty tower, or trying to put a
-;   disk on a tower that's too large. 
+; - Allow someone to change the disk size and height.
+; - Create a pause menu.
+; - Create animations.
 
 (define disk-height 20)
 ; A disk is a positive number.
@@ -40,9 +34,12 @@
 ; is, itself, a tower.
 (define tower-height length)
 (define tower-top last)
-(define (tower-rest tower)
+(define (tower-remove-top tower)
   (take tower (sub1 (length tower))))
+; See the value of the largest disk of the tower.
 (define tower-bottom car)
+(define tower-remove-bottom cdr)
+; Place a disk on top of (at the end of) a tower.
 (define (tower-add tower disk)
   (append tower (list disk)))
 (define tower-empty? null?)
@@ -54,26 +51,13 @@
 
 ; tower? -> image?
 (define (draw-tower tower)
-  (define (iter starting-point tower scene)
-    (if (tower-empty? tower)
-      scene
-      (let [(disk (draw-disk (car tower)))] 
-        (iter (+ starting-point disk-height)
-              (cdr tower)
-              (underlay/align/offset
-                'middle 'bottom
-                scene
-                0
-                (- starting-point)
-                disk)))))
-  (iter 0
-        tower
-        empty-image))
+  (if (tower-empty? tower)
+    empty-image
+    (above (draw-tower (tower-remove-bottom tower))
+           (draw-disk (tower-bottom tower)))))
 
 (module+ test
-  (define initial-tower (reverse (build-list 7 identity)))
-  ; Draw smaller towers, too.
-  ;(draw-tower (take 
+  (define initial-tower (make-tower-with-bottom-disk 7))
   (draw-tower initial-tower))
 
 (define list-max (lambda (lst) (apply max lst)))
@@ -91,13 +75,9 @@
            (map (lambda (tower)
                   (if (tower-empty? tower)
                     blank-tower
-                    (let [(tower-pic (draw-tower tower))]
-                      (underlay/align/offset
-                        'middle 'bottom
-                        blank-tower
-                        0
-                        0
-                        tower-pic))))
+                    (underlay/align 
+                      'middle 'bottom
+                      blank-tower (draw-tower tower))))
                 towers))]
     (horizontal-image-append (add-between tower-pics separator))))
 
@@ -106,14 +86,25 @@
         [(zero? index) (cons value (cdr lst))]
         [else (cons (car lst) 
                     (replace-ref (cdr lst) (sub1 index) value))]))
+
+; towers are a list[tower]. So towers? can be read as list[tower].
+
+; towers? nonnegative? -> towers?
+; Returns a list of towers with the top disk removed from (list-ref
+; towers index).
 (define (remove-from-towers towers index)
   (replace-ref towers 
                index 
-               (tower-rest (list-ref towers index))))
+               (tower-remove-top (list-ref towers index))))
+; towers? nonnegative? -> towers?
+; Returns a list of towers with the given disk added to the top of
+; (list-ref towers index).
 (define (add-to-towers towers index disk)
   (replace-ref towers 
                index 
                (tower-add (list-ref towers index) disk)))
+; towers? nonnegative? -> disk?
+; Returns the disk at the top of (list-ref towers index).
 (define (get-from-towers towers index)
   (tower-top (list-ref towers index)))
 
@@ -139,6 +130,10 @@
   (define initial-tower (make-tower-with-bottom-disk widest-disk))
   (define height (* disk-height (tower-height initial-tower)))
   (define widest-disk-width (image-width (draw-disk widest-disk)))
+  (define blank-tower (rectangle widest-disk-width 
+                                 height 
+                                 'solid 'white))
+  (define no-disk #f)
   (define initial-state
     (make-state
       #t
@@ -147,11 +142,7 @@
         (cons initial-tower
               (make-list (sub1 num-towers) null)))))
   (define (to-draw state)
-    (let* [(widest-disk-width (image-width (draw-disk widest-disk)))
-           (blank-tower (rectangle widest-disk-width 
-                                   height 
-                                   'solid 'white))
-           (pub (state-public state))
+    (let* [(pub (state-public state))
            (towers (draw-towers (game-state-towers pub) blank-tower))
            (limbo-area (empty-scene (image-width towers)
                                     (* disk-height 3)))
@@ -174,7 +165,7 @@
            (valid-index? 
              (lambda (i) (and (number? i) (< i num-towers))))
            (index (validate-index key))]
-      (if (eq? limbo #f)
+      (if (eq? limbo no-disk)
         ; No limbo disk.
         (cond [(and (valid-index? index)
                     (tower-non-empty? (list-ref towers index)))
@@ -196,7 +187,7 @@
                  (set-state-public 
                    state
                    (make-game-state 
-                     #f
+                     no-disk
                      (add-to-towers towers index limbo)))
                  state)]
               [else state]))))
