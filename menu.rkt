@@ -67,7 +67,10 @@
                    (menu-items menu)
                    selected-item))
 
-(define (make-menu-game title vals items)
+(define (make-menu-game initializer)
+  (define title (first initializer))
+  (define vals (second initializer))
+  (define items (third initializer))
   (define game-menu (make-menu title vals items))
   (define (initial-state->state initial)
     (make-state #t 0))
@@ -100,7 +103,8 @@
 (module+ test
   (define vals (build-list 5 identity))
   (define items (map number->string vals))
-  (define game (make-menu-game "Select Tower Size:" vals items))
+  (define game 
+    (make-menu-game (list "Select Tower Size:" vals items)))
 
   (big-bang
     ((game 'initial-state->state) #f)

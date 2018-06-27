@@ -7,63 +7,69 @@
 (require "towers.rkt")
 
 
-(define-struct control-state [component running])
+(define-struct control-state [components-left component])
 (define tower-heights (build-list 4 (curry + 3)))
 (displayln tower-heights)
 (define menu-items (map number->string tower-heights))
-(define (make-hanoi-game)
-  (define initial-state
-    (let [(menu (make-menu-game "Select Tower Size:" 
-                    tower-heights
-                    menu-items))]
-    (make-state 
-      (make-control-state menu #t)
-      ((menu 'initial-state->state) #f))))
-  (define base-scene (empty-scene 1000 500))
+(define initial-state->menu-game (curry apply make-menu-game))
+
+; initializer is initial value to kick off the 1st component.
+(define (compose-components components initializer name)
+  (define screen-width 1000)
+  (define screen-height 500)
+  (define base-scene (empty-scene screen-width screen-height))
   (define (get-current-game state)
     (control-state-component (state-private state)))
   (define (to-draw state)
     (place-image/align 
       (((get-current-game state) 'to-draw) (state-public state))
-      500 250
+      (/ screen-width 2) (/ screen-height 2)
       'middle 'middle
       base-scene))
+  (define (transition state)
+    (let* [(games-left (control-state-components-left (state-private state)))
+           (current-game (get-current-game state))]
+      (if (null? games-left)
+        #f
+        (let* [(current-game-state (state-public state))
+               (final-state 
+                 ((current-game 'final-state) current-game-state))
+               (rest-games (cdr games-left))
+               (new-game ((car games-left) final-state))]
+          (make-state
+            (make-control-state rest-games new-game)
+            ((new-game 'initial-state->state) #f))))))
   (define (on-key state key)
-    (let* [(transition 
-             (lambda (state)
-               (case ((get-current-game state) 'name)
-                 [(menu)
-                  (let* [(current-game-state (state-public state))
-                         (final-state 
-                           (((get-current-game state) 'final-state) current-game-state))
-                         (towers-game (make-towers-game final-state))]
-                    (make-state
-                      (make-control-state towers-game #t)
-                      ((towers-game 'initial-state->state) #f)))]
-                 [(towers) 
-                  (make-state
-                    (make-control-state #f #f)
-                    #f)])))
-           (make-hanoi-state 
-             (lambda (public-state-of-game)
-               (set-state-public
-                 state
-                 public-state-of-game)))
+    (let* [(current-game-state (state-public state))
            (current-game (get-current-game state))
-           (next-game-state ((current-game 'on-key) (state-public state) key))]
+           (next-game-state ((current-game 'on-key) current-game-state key))]
       (if ((current-game 'stop-when) next-game-state)
         (transition (set-state-public state next-game-state))
         (set-state-public state next-game-state))))
-  (define stop-when (compose1 (curry eq? #f) control-state-running state-private))
+  (define stop-when boolean?)
   (lambda (dispatch)
     (case dispatch
-      [(name) 'hanoi]
+      [(name) name]
       [(to-draw) to-draw]
       [(on-key) on-key]
       [(stop-when) stop-when]
-      [(initial-state->state) (lambda (state) initial-state)])))
+      [(initial-state->state) 
+       (lambda (state)
+         (let [(first-game ((car components) initializer))]
+           (make-state
+             (make-control-state 
+               (cdr components)
+               first-game)
+             ((first-game 'initial-state->state) #f))))])))
 
-(define game (make-hanoi-game))
+
+(define game 
+  (compose-components (list make-menu-game make-towers-game)
+                      (list "Choose Tower Size:"
+                            tower-heights
+                            menu-items)
+                      'hanoi))
+
 (big-bang
   ((game 'initial-state->state) #f)
   [to-draw (game 'to-draw)]
