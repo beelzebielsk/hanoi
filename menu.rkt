@@ -72,8 +72,7 @@
   (define vals (second initializer))
   (define items (third initializer))
   (define game-menu (make-menu title vals items))
-  (define (initial-state->state initial)
-    (make-state #t 0))
+  (define initial-state (make-state #t 0))
   (define (to-draw state)
     (draw-menu game-menu (state-public state)))
   (define (on-key state key)
@@ -99,7 +98,8 @@
       [(on-key) on-key]
       [(stop-when) stop-when]
       [(final-state) final-state]
-      [(initial-state->state) initial-state->state])))
+      [(initial-state) initial-state])))
+
 (module+ test
   (define vals (build-list 5 identity))
   (define items (map number->string vals))
@@ -107,8 +107,7 @@
     (make-menu-game (list "Select Tower Size:" vals items)))
 
   (big-bang
-    ((game 'initial-state->state) #f)
+    (game 'initial-state)
     [to-draw (game 'to-draw)]
     [on-key (game 'on-key) ]
     [stop-when (game 'stop-when)]))
-  

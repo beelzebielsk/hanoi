@@ -139,15 +139,13 @@
   (define initial-tower (make-tower-with-bottom-disk widest-disk))
   (define height (* disk-height (tower-height initial-tower)))
   (define widest-disk-width (image-width (draw-disk widest-disk)))
-  (define (initial-state->state initial)
-    (if (state? initial)
-      initial
-      (make-state 
-        #t 
-        (make-game-state 
-          #f 
-          (cons initial-tower 
-                (make-list (sub1 num-towers) null))))))
+  (define initial-state
+    (make-state
+      #t
+      (make-game-state
+        no-disk
+        (cons initial-tower
+              (make-list (sub1 num-towers) null)))))
   (define (to-draw state)
     (let* [(widest-disk-width (image-width (draw-disk widest-disk)))
            (blank-tower (rectangle widest-disk-width 
@@ -212,12 +210,12 @@
       [(on-key) on-key]
       [(stop-when) stop-when]
       [(final-state) final-state]
-      [(initial-state->state) initial-state->state])))
+      [(initial-state) initial-state])))
 (module+ test
   (define num-towers 3)
   (define game (make-towers-game 7))
   (big-bang
-    ((game 'initial-state->state) #f)
+    (game 'initial-state)
     [to-draw (game 'to-draw)]
     [on-key (game 'on-key) ]
     [stop-when (game 'stop-when)]))

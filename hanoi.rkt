@@ -29,7 +29,7 @@
                             menu-items)
                       'hanoi))
 (big-bang
-  ((game 'initial-state->state) #f)
+  (game 'initial-state)
   [to-draw (game 'to-draw)]
   [on-key (game 'on-key) ]
   [stop-when (game 'stop-when)])

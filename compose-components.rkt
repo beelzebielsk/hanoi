@@ -39,7 +39,7 @@
                (new-game ((car games-left) final-state))]
           (make-state
             (make-control-state rest-games new-game)
-            ((new-game 'initial-state->state) #f))))))
+            (new-game 'initial-state))))))
   (define (on-key state key)
     (let* [(current-game-state (state-public state))
            (current-game (get-current-game state))
@@ -54,14 +54,13 @@
       [(to-draw) to-draw]
       [(on-key) on-key]
       [(stop-when) stop-when]
-      [(initial-state->state) 
-       (lambda (state)
-         (let [(first-game ((car components) initializer))]
-           (make-state
-             (make-control-state 
-               (cdr components)
-               first-game)
-             ((first-game 'initial-state->state) #f))))])))
+      [(initial-state) 
+       (let [(first-game ((car components) initializer))]
+         (make-state
+           (make-control-state 
+             (cdr components)
+             first-game)
+           (first-game 'initial-state)))])))
 (module+ test
   (define game 
     (compose-components (list make-menu-game make-towers-game)
@@ -70,7 +69,7 @@
                               menu-items)
                         'hanoi))
   (big-bang
-    ((game 'initial-state->state) #f)
+    (game 'initial-state)
     [to-draw (game 'to-draw)]
     [on-key (game 'on-key) ]
     [stop-when (game 'stop-when)]))
