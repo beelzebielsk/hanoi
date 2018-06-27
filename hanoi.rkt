@@ -22,12 +22,35 @@
            (lambda (state) (adaptor ((game 'final-state) state)))]
           [else (game dispatch)])))))
 
-(define game 
-  (compose-components (list make-menu-game make-towers-game)
-                      (list "Choose Tower Size:"
-                            tower-heights
-                            menu-items)
-                      'hanoi))
+(define (make-still-screen message font-size)
+  (define (to-draw state)
+    (text message font-size 'black))
+  (define (on-key state key) #f)
+  (define stop-when boolean?)
+  (define (final-state state) #f)
+  (define initial-state #f)
+  (lambda (dispatch)
+    (case dispatch
+      [(name) 'towers]
+      [(to-draw) to-draw]
+      [(on-key) on-key]
+      [(stop-when) stop-when]
+      [(final-state) final-state]
+      [(initial-state) initial-state])))
+
+(define (finish-screen ignored)
+  (make-still-screen "Thanks for Playing!" 40))
+
+
+(define make-game 
+  (compose-components 'hanoi
+    (compose-components 'first make-menu-game)
+    (compose-components 'rest make-towers-game finish-screen)))
+
+(define game (make-game (list "Choose Tower Size:"
+                              tower-heights
+                              menu-items)))
+
 (big-bang
   (game 'initial-state)
   [to-draw (game 'to-draw)]
