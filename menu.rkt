@@ -91,6 +91,7 @@
   (define stop-when (compose1 (curry eq? #f) state-private))
   (lambda (dispatch)
     (case dispatch
+      [(name) 'menu]
       [(to-draw) to-draw]
       [(on-key) on-key]
       [(stop-when) stop-when]
