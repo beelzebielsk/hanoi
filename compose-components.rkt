@@ -69,8 +69,8 @@
   (define game 
     ((compose-components 'hanoi make-menu-game make-towers-game) 
      (list "Choose Tower Size:"
-           tower-heights
-           menu-items)))
+           menu-items
+           tower-heights)))
   (big-bang
     (game 'initial-state)
     [to-draw (game 'to-draw)]

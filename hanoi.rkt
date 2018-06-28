@@ -48,8 +48,8 @@
     (compose-components 'rest make-towers-game finish-screen)))
 
 (define game (make-game (list "Choose Tower Size:"
-                              tower-heights
-                              menu-items)))
+                              menu-items
+                              tower-heights)))
 
 (big-bang
   (game 'initial-state)

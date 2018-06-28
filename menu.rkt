@@ -1,15 +1,20 @@
 #lang racket
-; list[pair[string, any/c]] -> bang-thing
-; The menu takes in a list of key/value pairs. The key is displayed in
-; the menu, and selecting a menu item means causing the value for that
-; key to be the final state of the menu.
+; make-menu-game is a component.
+; initializer: (list string? list[string?] list[any/c])
+; - first member is menu title
+; - Second member is a list of keys which correspond to each value of
+;   the menu.
+; - third member is a list of values to be selected through the
+;   title.
+;
+; The menu will display the keys. The currently selected key will be
+; visually denoted by a small arrow to the left side of the key.
+; The final state of the menu is the value which corresponds to the
+; selected key. So, for instance, if `selection` is the final selected
+; index (ie the chosen key is (list-ref keys selection)), then the
+; final selected value is (list-ref vals selection)).
 
-(provide
-  ;menu? menu-title menu-vals menu-items
-  ;menu-next menu-prev menu-ref
-  ;draw-menu
-  make-menu-game
-  )
+(provide make-menu-game)
 (require 2htdp/image)
 (require 2htdp/universe)
 (require "component-state.rkt")
@@ -24,6 +29,7 @@
 (module+ test
   (draw-menu-item "item"))
 
+; The small arrow which denotes selection.
 (define cursor
   (beside (rectangle (make-font-size (* 3/2 rem)) 
                      rem 'solid 'black)
@@ -35,24 +41,20 @@
   (beside cursor (draw-menu-item "item")))
 
 
-(define (draw-menu-items title items selected-item)
+(define (draw-menu-items items selected-item)
   (define (draw-iter items-left menu-so-far distance-to-selected)
     (if (null? items-left)
       menu-so-far
-      (if (zero? distance-to-selected)
+      (let [(current-item
+              (if (zero? distance-to-selected)
+                (beside cursor (draw-menu-item (car items-left)))
+                (draw-menu-item (car items-left))))]
         (draw-iter (cdr items-left)
-                   (above menu-so-far
-                          (beside cursor 
-                                  (draw-menu-item (car items-left))))
-                   (sub1 distance-to-selected))
-        (draw-iter (cdr items-left)
-                   (above menu-so-far
-                          (draw-menu-item (car items-left)))
+                   (above menu-so-far current-item)
                    (sub1 distance-to-selected)))))
-  (let [(initial-menu (text title (make-font-size (* 3/2 rem)) 'black))]
-    (draw-iter items initial-menu selected-item)))
+  (draw-iter items empty-image selected-item))
 
-(define-struct menu [title vals items])
+(define-struct menu [title items vals])
 ; Takes in index of currently selected item, returns index of next
 ; item.
 (define (menu-next menu index)
@@ -63,15 +65,16 @@
   (list-ref (menu-vals menu) index))
 
 (define (draw-menu menu selected-item)
-  (draw-menu-items (menu-title menu) 
-                   (menu-items menu)
-                   selected-item))
+  (above (text (menu-title menu) 
+               (make-font-size (* 3/2 rem)) 'black)
+         (draw-menu-items (menu-items menu)
+                          selected-item)))
 
 (define (make-menu-game initializer)
   (define title (first initializer))
-  (define vals (second initializer))
-  (define items (third initializer))
-  (define game-menu (make-menu title vals items))
+  (define items (second initializer))
+  (define vals (third initializer))
+  (define game-menu (make-menu title items vals))
   (define initial-state (make-state #t 0))
   (define (to-draw state)
     (draw-menu game-menu (state-public state)))
@@ -99,12 +102,11 @@
       [(stop-when) stop-when]
       [(final-state) final-state]
       [(initial-state) initial-state])))
-
 (module+ test
   (define vals (build-list 5 identity))
   (define items (map number->string vals))
   (define game 
-    (make-menu-game (list "Select Tower Size:" vals items)))
+    (make-menu-game (list "Select Tower Size:" items vals)))
 
   (big-bang
     (game 'initial-state)
