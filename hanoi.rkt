@@ -13,15 +13,6 @@
 (displayln tower-heights)
 (define menu-items (map number->string tower-heights))
 
-(define (make-final-state-adaptor game-creator adaptor)
-  (lambda (initializer)
-    (let [(game (game-creator initializer))]
-      (lambda (dispatch)
-        (case dispatch
-          [(final-state) 
-           (lambda (state) (adaptor ((game 'final-state) state)))]
-          [else (game dispatch)])))))
-
 (define (make-still-screen message font-size)
   (define (to-draw state)
     (text message font-size 'black))
