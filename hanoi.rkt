@@ -18,7 +18,7 @@
     (text message font-size 'black))
   (define (on-key state key) #f)
   (define stop-when boolean?)
-  (define (final-state state) #f)
+  (define (output state) #f)
   (define initial-state #f)
   (lambda (dispatch)
     (case dispatch
@@ -26,7 +26,7 @@
       [(to-draw) to-draw]
       [(on-key) on-key]
       [(stop-when) stop-when]
-      [(final-state) final-state]
+      [(output) output]
       [(initial-state) initial-state])))
 
 (define (finish-screen ignored)

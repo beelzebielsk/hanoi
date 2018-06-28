@@ -1,4 +1,11 @@
 #lang racket
+; make-towers-game is a component.
+; initializer: number?
+; The initializer specifies the width of the widest (bottom-most) disk
+; on the tower, which is also the height of the tower. The component
+; implements the game "Towers of Hanoi".
+;
+; The final state of this component is always #f.
 
 (provide
   ;draw-disk
@@ -192,15 +199,15 @@
                  state)]
               [else state]))))
   (define stop-when (compose1 (curry eq? #f) state-private))
-  ; This component is not intened to lead into anything else.
-  (define (final-state state) #f)
+  ; This component is not intended to lead into anything else.
+  (define (output state) #f)
   (lambda (dispatch)
     (case dispatch
       [(name) 'towers]
       [(to-draw) to-draw]
       [(on-key) on-key]
       [(stop-when) stop-when]
-      [(final-state) final-state]
+      [(output) output]
       [(initial-state) initial-state])))
 (module+ test
   (define num-towers 3)
@@ -210,5 +217,3 @@
     [to-draw (game 'to-draw)]
     [on-key (game 'on-key) ]
     [stop-when (game 'stop-when)]))
-
-

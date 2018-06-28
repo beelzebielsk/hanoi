@@ -90,7 +90,7 @@
         [("q" return "\n" "\r\n" "\n\r") 
          (set-state-private state #f)]
         [else state])))
-  (define (final-state state)
+  (define (output state)
     (let [(index (state-public state))]
       (menu-ref game-menu index)))
   (define stop-when (compose1 (curry eq? #f) state-private))
@@ -100,7 +100,7 @@
       [(to-draw) to-draw]
       [(on-key) on-key]
       [(stop-when) stop-when]
-      [(final-state) final-state]
+      [(output) output]
       [(initial-state) initial-state])))
 (module+ test
   (define vals (build-list 5 identity))

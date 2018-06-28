@@ -1,5 +1,5 @@
 #lang racket
-(provide compose-components make-final-state-adaptor)
+(provide compose-components make-output-adaptor)
 
 (require 2htdp/image)
 (require 2htdp/universe)
@@ -32,8 +32,11 @@
 ;   for big-bang: state? string -> state?
 ; - stop-when: procedure?. Same specification as the stop-when
 ;   procedure for big-bang: state? -> boolean?
-; - final-state: procedure?. This has nothing to do with big-bang.
-;   The contract of this procedure is state? -> any/c.
+; - output: procedure?. This has nothing to do with big-bang.
+;   The contract of this procedure is state? -> any/c. Specifically,
+;   this transforms the final state of the component (which likely has
+;   details and structure that are private to the component) into a
+;   value meant for consumption by other components.
 ; - initial-state: state?. This procedure steps up the initial state
 ;   of the component, for when the component is 1st run. This way, a
 ;   user does not have to know anything about the structure of the
@@ -56,9 +59,9 @@
   (lambda (initializer)
     (define screen-width 1000)
     (define screen-height 500)
-    ; base-scene is a quick hack to deal with big-bang not it's output
-    ; images. All images of big-bang are placed within a scene that is
-    ; the same size as the first picture big-bang shows.
+    ; base-scene is a quick hack to deal with big-bang not resizing
+    ; it's output images. All images of big-bang are placed within a
+    ; scene that is the same size as the first picture big-bang shows.
     (define base-scene (empty-scene screen-width screen-height))
     (define (get-current-game state)
       (control-state-component (state-private state)))
@@ -73,12 +76,12 @@
                (control-state-components-left (state-private state)))
              (current-game (get-current-game state))
              (current-game-state (state-public state))
-             (final-state 
-               ((current-game 'final-state) current-game-state))]
+             (output
+               ((current-game 'output) current-game-state))]
         (if (null? games-left)
-          (make-state #f final-state)
+          (make-state #f output)
           (let* [(rest-games (cdr games-left))
-                 (new-game ((car games-left) final-state))]
+                 (new-game ((car games-left) output))]
             (make-state
               (make-control-state rest-games new-game)
               (new-game 'initial-state))))))
@@ -90,13 +93,13 @@
           (transition (set-state-public state next-game-state))
           (set-state-public state next-game-state))))
     (define stop-when (compose1 boolean? state-private))
-    (define final-state state-public)
+    (define output state-public)
     (lambda (dispatch)
       (case dispatch
         [(name) name]
         [(to-draw) to-draw]
         [(on-key) on-key]
-        [(final-state) final-state]
+        [(output) output]
         [(stop-when) stop-when]
         [(initial-state) 
          (let [(first-game ((car components) initializer))]
@@ -110,13 +113,13 @@
 ; This takes in a component and a function and returns a new component.
 ; The final state of this component is the result of running the final
 ; state of the original component through the adaptor function.
-(define (make-final-state-adaptor component adaptor)
+(define (make-output-adaptor component adaptor)
   (lambda (initializer)
     (let [(game (component initializer))]
       (lambda (dispatch)
         (case dispatch
-          [(final-state) 
-           (lambda (state) (adaptor ((game 'final-state) state)))]
+          [(output) 
+           (lambda (state) (adaptor ((game 'output) state)))]
           [else (game dispatch)])))))
 
 
@@ -134,14 +137,14 @@
     [stop-when (game 'stop-when)]))
 
 
-; An example of make-final-state-adaptor
+; An example of make-output-adaptor
 (module+ test
   (define (range start len)
     (if (zero? len)
       null
       (cons start (range (add1 start) (sub1 len)))))
   (define menu-creator
-    (make-final-state-adaptor 
+    (make-output-adaptor 
       make-menu-game
       (lambda (final-state)
         (list (format "Choose Tower Size from ~a items:" final-state)
