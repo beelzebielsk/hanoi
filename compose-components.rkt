@@ -55,7 +55,7 @@
 ; - (compose-components 'test comp1 comp2 comp3): The initializer and
 ;   final state of this component is the initlaizer of comp1 and the
 ;   final state of comp3.
-(define (compose-components name . components)
+(define (compose-components components)
   (lambda (initializer)
     (define screen-width 1000)
     (define screen-height 500)
@@ -96,7 +96,6 @@
     (define output state-public)
     (lambda (dispatch)
       (case dispatch
-        [(name) name]
         [(to-draw) to-draw]
         [(on-key) on-key]
         [(output) output]
@@ -126,7 +125,7 @@
 ; An example of compose components.
 (module+ test
   (define game 
-    ((compose-components 'hanoi make-menu-game make-towers-game) 
+    ((compose-components make-menu-game make-towers-game) 
      (list "Choose Tower Size:"
            menu-items
            tower-heights)))
@@ -154,7 +153,6 @@
 
   (define game1
     ((compose-components 
-       'hanoi 
        menu-creator make-menu-game make-towers-game) 
      (list "Choose how many options for next menu:"
            (map number->string (range 1 5))

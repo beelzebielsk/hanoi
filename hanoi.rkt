@@ -22,7 +22,6 @@
   (define initial-state #f)
   (lambda (dispatch)
     (case dispatch
-      [(name) 'towers]
       [(to-draw) to-draw]
       [(on-key) on-key]
       [(stop-when) stop-when]
