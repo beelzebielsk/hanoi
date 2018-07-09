@@ -79,7 +79,7 @@
   (define (to-draw state)
     (draw-menu game-menu (state-public state)))
   (define (on-key state key)
-    (let [(return "\r") (menu-entry (state-public state))]
+    (let [(menu-entry (state-public state))]
       (case key
         ; High parts of a menu are earlier in list
         ; Low parts of a menu are later in list
@@ -87,7 +87,7 @@
          (set-state-public state (menu-next game-menu menu-entry))]
         [("up" "k")
          (set-state-public state (menu-prev game-menu menu-entry))]
-        [("q" return "\n" "\r\n" "\n\r") 
+        [("q" "\r")
          (set-state-private state #f)]
         [else state])))
   (define (output state)
